@@ -15,3 +15,6 @@ pyparsing~=3.1.4
 typing_extensions~=4.12.2
 matplotlib~=3.9.2
 python-dotenv~=1.0.1
+inference-gpu
+
+opencv-python~=4.10.0.84

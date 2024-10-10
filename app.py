@@ -1,9 +1,11 @@
+import cv2
 import streamlit as st
 import numpy as np
 from PIL import Image
 
 from models.vehicle_detection import detect_vehicles
 from utils.custom_logs import setup_logger
+from utils.file_utils import visualize_detections
 
 logger = setup_logger("app.py")
 
@@ -19,15 +21,27 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     logger.info("Image opened successfully!")
 
-    st.image(image, caption='Uploaded Image.', use_column_width=True)
     st.write("Processing...")
 
-    # Call the detection model\
+    # Call the detection model
     logger.info("Calling the detection model...")
     detection_result = detect_vehicles(image)
+    logger.info(f"Detection result: {detection_result}")
 
-    # Display the bounding boxes or results (for now, we'll print raw detection result)
+    if not detection_result:
+        logger.error("No detection results to visualize.")
+        st.error("No detections found.")
+    else:
+        logger.info("Visualizing the detection result...")
+        image_result = visualize_detections(image, detection_result)
 
-    logger.info("Displaying the detection:")
-    st.write(detection_result)
-    logger.info("Detection displayed successfully!")
+        # Display both images side by side
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(image, caption='Uploaded Image', use_column_width=True)
+
+        with col2:
+            st.image(image_result, caption='Detection Result', use_column_width=True)
+
+        logger.info("Detection displayed successfully!")
+
