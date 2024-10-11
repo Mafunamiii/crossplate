@@ -9,7 +9,7 @@ from models.ocr import extract_license_plate_text
 from pipelines.image_pipeline import detect_vehicle_plate
 from preprocessing.image_preprocessing import crop_plate, preprocess_license_plate
 from utils.custom_logs import setup_logger
-from utils.file_utils import visualize_detections
+from utils.file_utils import visualize_detections, visualize_combined_detections
 
 logger = setup_logger("app.py")
 
@@ -36,6 +36,7 @@ if uploaded_file is not None:
     ocr_result = extract_license_plate_text(pre_processed_image)
 
     st.write("**License Plate Detected:** ", ocr_result)
+    st.image(visualize_combined_detections(image, vehicle_detected, plate_detected), caption='Detection Summary', use_column_width=True)
     st.image(visualize_detections(image, vehicle_detected), caption='Vehicle Detection', use_column_width=True)
     st.image(visualize_detections(image, plate_detected), caption='Plate Detection', use_column_width=True)
     st.image(pre_processed_image, caption='Cropped Image', use_column_width=True)

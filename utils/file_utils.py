@@ -35,6 +35,7 @@ def image_to_base64(image):
 
 
 def visualize_detections(image, results):
+
     if isinstance(results, list) and len(results) > 0:
         result = results[0]
     else:
@@ -46,6 +47,7 @@ def visualize_detections(image, results):
     # Convert the image from PIL to OpenCV format if necessary
     if isinstance(image, Image.Image):
         image = np.array(image)  # Convert PIL image to NumPy array
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
     # Loop through the predictions
     for detection in result.predictions:  # Access predictions from the response
@@ -61,66 +63,72 @@ def visualize_detections(image, results):
         x2 = int(x_center + width / 2)
         y2 = int(y_center + height / 2)
 
-        # Draw the bounding box
+        # Draw the bounding box in green (BGR format)
         logger.info(f"Drawing bounding box at ({x1}, {y1}) ({x2}, {y2})")
-        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-        # Optionally add the class label and confidence
+            # Optionally add the class label and confidence
         label = f"{detection.class_name} ({detection.confidence:.2f})"
-        logger.info(f"Adding label: {label}")
-        cv2.putText(image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+        if detection.class_name == "licenseplate":
+            cv2.rectangle(image, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            cv2.putText(image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+        elif detection.class_name == "car":
+            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green in BGR
+            cv2.putText(image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
 
     logger.info("Bounding boxes drawn successfully!")
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert back to RGB format
+    return image  # Return the original image in BGR format
 
-    # Convert the image from BGR (OpenCV default) to RGB for displaying with matplotlib
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    logger.info("Conversion to RGB successful!")
 
-    return image_rgb
+def visualize_combined_detections(image, vehicle_result, plate_result):
+    logger.info("Visualizing combined detections for vehicles and license plates.")
 
-def visualize_combined_detections(original_image, car_result, plate_result):
-    # Load the image
-    logger.info("Visualizing the combined detections...")
+    # Convert the image from PIL to OpenCV format if necessary
+    if isinstance(image, Image.Image):
+        image = np.array(image)  # Convert PIL image to NumPy array
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-    # Function to draw bounding boxes
-    def draw_bounding_box(original_image, detection, color, label):
-        logger.info(f"Drawing bounding box for {label} detection...")
-        # Get the bounding box coordinates
-        x_center, y_center = detection.x, detection.y
-        width, height = detection.width, detection.height
-        logger.info(f"Bounding box coordinates: ({x_center}, {y_center}) ({width}, {height})")
-        # Calculate the top-left and bottom-right corners
-        x1 = int(x_center - width / 2)
-        y1 = int(y_center - height / 2)
-        x2 = int(x_center + width / 2)
-        y2 = int(y_center + height / 2)
-        logger.info(f"Bounding box corners: ({x1}, {y1}) ({x2}, {y2})")
-        # Draw the bounding box
-        cv2.rectangle(original_image, (x1, y1), (x2, y2), color, 2)
-        logger.info(f"Bounding box drawn successfully!")
-        # Add the label and confidence score
-        confidence = detection.confidence
-        label_with_conf = f"{label} ({confidence:.2f})"
-        cv2.putText(original_image, label_with_conf, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    # Draw vehicle bounding boxes in green (BGR format)
+    if isinstance(vehicle_result, list) and len(vehicle_result) > 0:
+        vehicle_detections = vehicle_result[0]  # Assuming the first entry has the needed results
+        for detection in vehicle_detections.predictions:
+            # Get the bounding box coordinates
+            x_center, y_center = detection.x, detection.y
+            width, height = detection.width, detection.height
 
-    logger.info(f"Drawing bounding boxes for car and license plate detections...")
-    logger.info(f"Car detection results: {car_result}")
-    logger.info(f"License plate detection results: {plate_result}")
+            x1 = int(x_center - width / 2)
+            y1 = int(y_center - height / 2)
+            x2 = int(x_center + width / 2)
+            y2 = int(y_center + height / 2)
 
-    # Draw car detection (in green)
-    for car_detection in car_result:
-        for detection in car_detection.predictions:
-            logger.info("Drawing bounding box for car detection...")
-            draw_bounding_box(original_image, detection, (0, 255, 0), "Car")
+            # Draw bounding box in green for vehicles
+            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            label = f"Car ({detection.confidence:.2f})"
+            cv2.putText(image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    # Draw license plate detection (in yellow)
-    for plate_detection in plate_result:
-        for detection in plate_detection.predictions:
-            logger.info("Drawing bounding box for license plate detection...")
-            draw_bounding_box(original_image, detection, (255, 255, 0), "License Plate")
+    # Draw license plate bounding boxes in blue (BGR format)
+    if isinstance(plate_result, list) and len(plate_result) > 0:
+        plate_detections = plate_result[0]  # Assuming the first entry has the needed results
+        for detection in plate_detections.predictions:
+            # Get the bounding box coordinates
+            x_center, y_center = detection.x, detection.y
+            width, height = detection.width, detection.height
 
-    # Convert the image from BGR (OpenCV default) to RGB for displaying with matplotlib
-    logger.info("Conversion to RGB...")
-    image_rgb = cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB)
-    logger.info("Conversion successful!")
-    return image_rgb
+            x1 = int(x_center - width / 2)
+            y1 = int(y_center - height / 2)
+            x2 = int(x_center + width / 2)
+            y2 = int(y_center + height / 2)
+
+            # Draw bounding box in blue for license plates
+            cv2.rectangle(image, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            label = f"License Plate ({detection.confidence:.2f})"
+            cv2.putText(image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+    logger.info("Combined bounding boxes drawn successfully!")
+
+    # Convert back to RGB format for display
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert back to RGB format
+    return image  # Return the modified image with both bounding boxes
+
